@@ -25,7 +25,8 @@
     "types": [
       "@adonisjs/core",
       "@adonisjs/session",
-      "@adonisjs/view"
+      "@adonisjs/view",
+      "@adonisjs/repl"
     ]
   }
 }

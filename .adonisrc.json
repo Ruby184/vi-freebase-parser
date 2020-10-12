@@ -2,7 +2,8 @@
   "typescript": true,
   "commands": [
     "./commands",
-    "@adonisjs/core/build/commands"
+    "@adonisjs/core/build/commands",
+    "@adonisjs/repl/build/commands"
   ],
   "exceptionHandlerNamespace": "App/Exceptions/Handler",
   "aliases": {
@@ -26,5 +27,8 @@
     ".adonisrc.json",
     "resources/views/**/*.edge",
     "public/**"
+  ],
+  "aceProviders": [
+    "@adonisjs/repl"
   ]
 }

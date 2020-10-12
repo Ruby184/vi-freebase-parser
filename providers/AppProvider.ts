@@ -1,8 +1,9 @@
-import { IocContract } from '@adonisjs/fold'
+import { ApplicationContract } from '@ioc:Adonis/Core/Application'
 
 export default class AppProvider {
-  constructor (protected $container: IocContract) {
-  }
+  public static needsApplication = true
+  
+  constructor (protected app: ApplicationContract) {}
 
   public register () {
     // Register your own bindings
