@@ -25,8 +25,8 @@ class RecordTransform extends Transform {
 
 type Record = {
   mid: string
-  title: { [lang: string]: string }
-  aliases: { [lang: string]: string[] }
+  title: string | null
+  aliases: string[]
   types: string[]
 }
 
@@ -35,7 +35,8 @@ export default class Parser {
   private processed: Set<string> = new Set()
 
   private ws = new RecordTransform()
-  
+  private drain = Promise.resolve()
+
   private cache = new LRU({
     max: 100,
     dispose: (key, val) => {
@@ -45,17 +46,21 @@ export default class Parser {
         this.processed.add(key)
       }
 
-      this.ws.write(val)
+      if (!this.ws.write(val)) {
+        this.drain = new Promise((resolve) => {
+          this.ws.once('drain', resolve)
+        })
+      }
     }
   })
 
-  private regex = /^<.+\/m\.([a-z0-9_]+)>\s+<(.+)>\s+((?:"(?<text>.+)"@(?<lang>[a-z]{2}))|(?:<.+\/(?<type>.+)>))\s+\.$/
+  private regex = /^<.+\/m\.([a-z0-9_]+)>\s+<(.+)>\s+((?:"(?<text>.+)"@en)|(?:<.+\/(?<type>.+)>))\s+\.$/
   
   constructor (protected app: ApplicationContract) {}
 
   private getRecord (mid: string): Record {
     if (!this.cache.has(mid)) {
-      this.cache.set(mid, { mid, title: {}, aliases: {}, types: [] })
+      this.cache.set(mid, { mid, title: null, aliases: [], types: [] })
     }
 
     return this.cache.get(mid)
@@ -81,20 +86,12 @@ export default class Parser {
         switch (match[2]) {
           case 'http://rdf.freebase.com/ns/common.topic.alias':
             const { aliases } = this.getRecord(mid)
-
-            if (!aliases[match.groups!.lang]) {
-              aliases[match.groups!.lang] = []
-            }
-
-            aliases[match.groups!.lang].push(
-              match.groups!.text.replace(escapeRegex, replacer)
-            )
+            aliases.push(match.groups!.text.replace(escapeRegex, replacer))
           break
 
           case 'http://rdf.freebase.com/ns/type.object.name':
-            const { title } = this.getRecord(mid)
-
-            title[match.groups!.lang] = match.groups!.text.replace(escapeRegex, replacer)
+            const record = this.getRecord(mid)
+            record.title = match.groups!.text.replace(escapeRegex, replacer)
           break
 
           case 'http://rdf.freebase.com/ns/type.object.type':
@@ -102,6 +99,8 @@ export default class Parser {
           break
         }
       }
+
+      await this.drain
     }
 
     this.cache.reset()
