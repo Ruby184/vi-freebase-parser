@@ -1,5 +1,4 @@
-import { BaseCommand, args } from '@adonisjs/ace'
-import { inject } from '@adonisjs/fold'
+import { BaseCommand, args, inject } from '@adonisjs/core/build/standalone'
 
 export default class FreebaseParse extends BaseCommand {
 
@@ -32,10 +31,6 @@ export default class FreebaseParse extends BaseCommand {
 
 	@inject(['App/Parser'])
   public async run (parser) {
-		const result: {
-			[subject: string]: { title: string, aliases: string[], types: string[] }
-		} = await parser.parse(this.path)
-
-		console.log(result)
+		const result = await parser.parse(this.path)
 	}
 }

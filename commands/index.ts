@@ -1,6 +1,5 @@
-import { listDirectoryFiles } from '@adonisjs/ace'
-// import Application from '@ioc:Adonis/Core/Application'
-import { resolve } from 'path'
+import { listDirectoryFiles } from '@adonisjs/core/build/standalone'
+import Application from '@ioc:Adonis/Core/Application'
 
 /*
 |--------------------------------------------------------------------------
@@ -19,6 +18,6 @@ import { resolve } from 'path'
 */
 export default listDirectoryFiles(
   __dirname,
-  resolve(__dirname, '..'),
-  ['./commands/index.ts', './commands/index.js']
+  Application.appRoot,
+  ['./commands/index']
 )

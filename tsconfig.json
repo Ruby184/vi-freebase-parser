@@ -15,6 +15,9 @@
       "App/*": [
         "./app/*"
       ],
+      "Config/*": [
+        "./config/*"
+      ],
       "Contracts/*": [
         "./contracts/*"
       ],

@@ -9,15 +9,15 @@ export default class AppProvider {
     // Register your own bindings
   }
 
-  public boot () {
+  public async boot () {
     // IoC container is ready
   }
 
-  public shutdown () {
-    // Cleanup, since app is going down
+  public async ready () {
+    // App is ready
   }
 
-  public ready () {
-    // App is ready
+  public async shutdown () {
+    // Cleanup, since app is going down
   }
 }

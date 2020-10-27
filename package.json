@@ -8,8 +8,8 @@
     "lint": "eslint . --ext=.ts"
   },
   "devDependencies": {
-    "@adonisjs/assembler": "^3.0.2",
-    "@adonisjs/repl": "^1.1.2",
+    "@adonisjs/assembler": "^3.0.6",
+    "@adonisjs/repl": "^1.1.5",
     "adonis-preset-ts": "^1.0.4",
     "eslint": "^7.11.0",
     "eslint-plugin-adonis": "^1.0.15",
@@ -19,13 +19,11 @@
     "youch-terminal": "^1.0.1"
   },
   "dependencies": {
-    "@adonisjs/ace": "^7.1.4",
-    "@adonisjs/core": "^5.0.2-beta-rc-5",
-    "@adonisjs/fold": "^7.0.6",
-    "@adonisjs/session": "^4.0.0",
-    "@adonisjs/view": "^3.0.1",
+    "@adonisjs/core": "^5.0.4-preview-rc-2",
+    "@adonisjs/session": "^4.0.5",
+    "@adonisjs/view": "^3.0.7",
+    "lru-cache": "^6.0.0",
     "proxy-addr": "^2.0.6",
-    "reflect-metadata": "^0.1.13",
-    "source-map-support": "^0.5.19"
+    "reflect-metadata": "^0.1.13"
   }
 }
