@@ -21,7 +21,8 @@
   "dependencies": {
     "@adonisjs/core": "^5.0.4-preview-rc-2",
     "@adonisjs/session": "^4.0.5",
-    "@adonisjs/view": "^3.0.7",
+    "@adonisjs/view": "^3.0.8",
+    "@elastic/elasticsearch": "^7.9.1",
     "lru-cache": "^6.0.0",
     "proxy-addr": "^2.0.6",
     "reflect-metadata": "^0.1.13"

@@ -32,20 +32,16 @@ type Record = {
 
 @inject(['Adonis/Core/Application'])
 export default class Parser {
-  private processed: Set<string> = new Set()
-
   private ws = new RecordTransform()
   private drain = Promise.resolve()
 
   private cache = new LRU({
     max: 100,
-    dispose: (key, val) => {
-      if (this.processed.has(key)) {
-        console.log('Already saved id found', key)
-      } else {
-        this.processed.add(key)
+    dispose: (_: string, val: Record) => {
+      if (val.title === null && val.aliases.length === 0) {
+        return
       }
-
+      
       if (!this.ws.write(val)) {
         this.drain = new Promise((resolve) => {
           this.ws.once('drain', resolve)
@@ -85,13 +81,11 @@ export default class Parser {
 
         switch (match[2]) {
           case 'http://rdf.freebase.com/ns/common.topic.alias':
-            const { aliases } = this.getRecord(mid)
-            aliases.push(match.groups!.text.replace(escapeRegex, replacer))
+            this.getRecord(mid).aliases.push(match.groups!.text.replace(escapeRegex, replacer))
           break
 
           case 'http://rdf.freebase.com/ns/type.object.name':
-            const record = this.getRecord(mid)
-            record.title = match.groups!.text.replace(escapeRegex, replacer)
+            this.getRecord(mid).title = match.groups!.text.replace(escapeRegex, replacer)
           break
 
           case 'http://rdf.freebase.com/ns/type.object.type':
@@ -103,7 +97,10 @@ export default class Parser {
       await this.drain
     }
 
-    this.cache.reset()
+    while (this.cache.pop() !== null) {
+      await this.drain
+    }
+
     this.ws.end()
 
     return new Promise((resolve, reject) => {

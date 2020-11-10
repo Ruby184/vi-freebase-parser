@@ -5,4 +5,4 @@ coverage
 .DS_STORE
 .env
 tmp
-resources/freebase/freebase-rdf-latest.gz
+resources/**/freebase-rdf-latest.gz
