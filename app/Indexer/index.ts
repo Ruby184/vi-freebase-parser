@@ -1,6 +1,6 @@
 import { inject } from '@adonisjs/core/build/standalone'
 import { ApplicationContract } from '@ioc:Adonis/Core/Application'
-import { Client } from '@elastic/elasticsearch'
+import { Client, ApiResponse, RequestParams } from '@elastic/elasticsearch'
 import { createReadStream } from 'fs'
 import { createGunzip } from 'zlib'
 import { createInterface } from 'readline'
@@ -21,11 +21,10 @@ export default class Indexer {
   constructor (protected app: ApplicationContract) {}
 
   public async indexFile (name: string): Promise<void> {
-    const fullPath = this.app.resourcesPath('output', name)
-    const gunzipStream = createReadStream(fullPath).pipe(createGunzip())
-    const rl = createInterface({ input: gunzipStream, crlfDelay: Infinity })
-
-    await this.client.indices.delete({ index: this.indexName })
+    await this.client.indices.delete(
+      { index: this.indexName }
+    )
+    
     await this.client.indices.create({
       index: this.indexName,
       body: {
@@ -43,7 +42,7 @@ export default class Indexer {
             types: {
               type: 'text',
               fields: {
-                raw: { 
+                raw: {
                   type: 'keyword'
                 }
               }
@@ -51,55 +50,120 @@ export default class Indexer {
           }
         }
       }
-    }, { ignore: [400] })
+    })
 
+    const fullPath = this.app.resourcesPath('output', name)
+    const gunzipStream = createReadStream(fullPath).pipe(createGunzip())
+    const rl = createInterface({ input: gunzipStream, crlfDelay: Infinity })
     const records: Record[] = []
 
-    for await (const line of rl) {
-      if (records.push(JSON.parse(line)) >= 100) {
-        const body = records.reduce(
-          (acc, record) => acc.concat([{ index: { _index: this.indexName } }, record]),
-          [] as any[]
-        )
+    const indexRecords = async (refresh: boolean | 'wait_for' = false) => {
+      const body = records.reduce(
+        (acc, record) => acc.concat([{ index: { _index: this.indexName } }, record]),
+        [] as any[]
+      )
 
-        records.length = 0
+      records.length = 0
 
-        const { body: response } = await this.client.bulk({ body, refresh: true })
+      const { body: response } = await this.client.bulk({ body, refresh })
 
-        if (response.errors) {
-          const erroredDocuments: any[] = []
+      if (response.errors) {
+        const erroredDocuments: any[] = []
 
-          response.items.forEach((action, i) => {
-            const operation = Object.keys(action)[0]
+        response.items.forEach((action, i) => {
+          const operation = Object.keys(action)[0]
 
-            if (action[operation].error) {
-              erroredDocuments.push({
-                status: action[operation].status,
-                error: action[operation].error,
-                operation: body[i * 2],
-                document: body[i * 2 + 1]
-              })
-            }
-          })
-  
-          throw erroredDocuments
-        }
+          if (action[operation].error) {
+            erroredDocuments.push({
+              status: action[operation].status,
+              error: action[operation].error,
+              operation: body[i * 2],
+              document: body[i * 2 + 1]
+            })
+          }
+        })
 
-        break
+        throw erroredDocuments
       }
     }
 
+    for await (const line of rl) {
+      if (records.push(JSON.parse(line)) >= 300) {
+        await indexRecords()
+      }
+    }
+
+    if (records.length > 0) {
+      await indexRecords('wait_for')
+    }
+  }
+
+  async getTypesCount (size: number = 20000): Promise<ApiResponse['body']['hits']> {
+    const params: RequestParams.Search = {
+      index: this.indexName,
+      body: {
+        size: 0,
+        aggs: {
+          types: {
+            terms: { field: 'types.raw', size }
+          }
+        }
+      }
+    }
+
+    const { body } = await this.client.search(params)
+
+    return body.aggregations.types.buckets
+  }
+
+  async getCountOfAliases (): Promise<number> {
+    const params: RequestParams.Count = {
+      index: this.indexName,
+      body: {
+        query: {
+          exists : {
+            field : 'aliases'
+          }
+        }
+      }
+    }
+
+    const { body } = await this.client.count(params)
+
+    return body.count
+  }
+
+  async search (query: string): Promise<any> {
     const { body } = await this.client.search({
       index: this.indexName,
       body: {
         query: {
-          match: {
-            title: 'claudia'
+          multi_match: {
+            query,
+            fields: ['title^2', 'aliases^3', 'types']
           }
         }
       }
     })
   
-    console.log(body.hits.hits)
+    return body.hits.hits.map((h) => h._source)
+  }
+
+  async getOfType (type: string): Promise<any> {
+    const { body } = await this.client.search({
+      index: this.indexName,
+      body: {
+        query: {
+          term: {
+            'types.raw': {
+              value: type,
+              boost: 1.0
+            }
+          }
+        }
+      }
+    })
+  
+    return body.hits.hits.map((h) => h._source)
   }
 }
